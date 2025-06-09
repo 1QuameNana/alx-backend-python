@@ -107,7 +107,7 @@ class TestGithubOrgClient(unittest.TestCase):
         result = GithubOrgClient.has_license(repo, license_key)
         self.assertEqual(result, expected)
 
-
+#!/usr/bin/env python3
 from client import GithubOrgClient
 import fixtures
 
