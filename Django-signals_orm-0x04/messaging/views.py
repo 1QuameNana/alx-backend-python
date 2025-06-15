@@ -26,12 +26,11 @@ def get_threaded_conversations(user):
     return top_level_messages
 
 
-@login_required
 def unread_inbox(request):
     """
-    View to display unread messages for the logged-in user.
+    View to display unread messages using the custom manager.
     """
-    unread_messages = Message.unread.for_user(request.user)
+    unread_messages = Message.unread.unread_for_user(request.user)
     return render(request, 'inbox/unread_messages.html', {
         'unread_messages': unread_messages
     })
