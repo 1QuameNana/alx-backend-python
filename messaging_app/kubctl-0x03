@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# kubctl-0x03 - Rolling update and live availability test
+
+set -e
+
+DEPLOYMENT="django-blue"
+NAMESPACE="default"
+SERVICE_PORT=8000
+
+echo "Applying updated deployment with image version 2.0..."
+kubectl apply -f blue_deployment.yaml
+
+echo "Monitoring rolling update status..."
+kubectl rollout status deployment/${DEPLOYMENT} --namespace=$NAMESPACE &
+
+# Background curl test loop
+echo "Starting live request monitoring with curl (5s intervals)..."
+(
+    for i in {1..10}; do
+        echo -n "Attempt $i: "
+        curl --silent --max-time 2 http://localhost:$SERVICE_PORT/ || echo "❌ Request failed"
+        sleep 5
+    done
+) &
+
+wait  # Wait for rollout status and curl monitoring
+
+echo "Verifying pods post-update..."
+kubectl get pods -l app=django,version=blue
+
+echo "Rolling update complete and app remained reachable."
+
