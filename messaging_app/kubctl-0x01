@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# kubctl-0x01 - Scale, test, and monitor a Django app deployment
+
+set -e
+
+DEPLOYMENT_NAME=django-messaging-app
+SERVICE_NAME=django-messaging-service
+NAMESPACE=default 
+PORT=8000
+
+# Scale deployment to 3 replicas
+echo "Scaling deployment $DEPLOYMENT_NAME to 3 replicas..."
+kubectl scale deployment "$DEPLOYMENT_NAME" --replicas=3 --namespace=$NAMESPACE
+
+# Wait a for few seconds for pods to be ready
+echo "Waiting for pods to start..."
+sleep 10
+
+# Get pods
+echo "Current pods running:"
+kubectl get pods --namespace=$NAMESPACE
+
+# Port-forward service for load testing
+echo "Port-forwarding service to localhost..."
+kubectl port-forward service/$SERVICE_NAME 8000:80 --namespace=$NAMESPACE &
+PF_PID=$!
+sleep 3
+
+# Run workload test (10 seconds, 4 threads, 100 connections)
+echo "Running workload test"
+wrk -t4 -c100 -d10s http://localhost:8000/ > wrk_results.txt
+
+# Kill port-forward
+kill $PF_PID
+
+# Show work results
+echo "Load test result summary:"
+cat work_results.txt
+
+# Monitor resource usage (requires metrics-server)
+echo "Monitoring resource usage:"
+kubectl top pods --namespace=$NAMESPACE || echo "Metrics server not installed or not available."
+
+echo "Done!"
+
