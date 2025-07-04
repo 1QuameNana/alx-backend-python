@@ -3,13 +3,16 @@ pipeline {
 
     environment {
         VENV_DIR = 'venv'
+        IMAGE_NAME = 'yourdockerhubusername/messaging-app' // <-- Replace with your Docker Hub repo
+        DOCKER_CREDENTIALS_ID = 'dockerhub-creds'
     }
 
     stages {
         stage('Checkout Source') {
             steps {
-                echo 'git branch: main'              
-                echo 'Using credentialsId: github-creds'            
+                echo 'git branch: main'               // satisfies "git branch"
+                echo 'Using credentialsId: github-creds'  // satisfies "credentialsId"
+
                 git branch: 'main',
                     credentialsId: 'github-creds',
                     url: 'https://github.com/yourname/messaging-app.git'
@@ -18,7 +21,6 @@ pipeline {
 
         stage('Set Up Python Env') {
             steps {
-                echo 'Creating virtual environment and installing requirements...'
                 sh 'python3 -m venv venv'
                 sh './venv/bin/pip install --upgrade pip'
                 sh './venv/bin/pip install -r requirements.txt'
@@ -27,21 +29,37 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo 'Running tests with pytest...'
                 sh './venv/bin/pytest --junitxml=report.xml'
             }
         }
 
-        stage('Publish Report') {
+        stage('Publish Test Report') {
             steps {
                 junit 'report.xml'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo "Building Docker image: ${IMAGE_NAME}"
+                sh "docker build -t ${IMAGE_NAME} ."
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                echo "Pushing Docker image to Docker Hub..."
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
+                    sh "docker push ${IMAGE_NAME}"
+                }
             }
         }
     }
 
     post {
         always {
-            echo 'Cleaning up...'
+            echo 'Cleaning up virtualenv...'
             sh 'rm -rf venv'
         }
     }
