@@ -6,16 +6,20 @@ pipeline {
     }
 
     stages {
-        stage('Clone Repo') {
+        stage('Checkout Source') {
             steps {
-                echo 'Cloning GitHub Repository...'
-                checkout scm
+                echo 'git branch: main'              
+                echo 'Using credentialsId: github-creds'  
+                
+                git branch: 'main',
+                    credentialsId: 'github-creds',
+                    url: 'https://github.com/yourname/messaging-app.git'
             }
         }
 
         stage('Set Up Python Env') {
             steps {
-                echo 'Creating Virtual Environment...'
+                echo 'Setting up Python virtual environment'
                 sh 'python3 -m venv venv'
                 sh './venv/bin/pip install --upgrade pip'
                 sh './venv/bin/pip install -r requirements.txt'
@@ -24,7 +28,7 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo 'Running pytest...'
+                echo 'Running tests with pytest'
                 sh './venv/bin/pytest --junitxml=report.xml'
             }
         }
