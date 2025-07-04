@@ -28,8 +28,8 @@ jobs:
 
     env:
       DJANGO_SECRET_KEY: testsecretkey
-      DB_NAME: test_db
-      DB_USER: test_user
+      DB_NAME: name_db
+      DB_USER: nana_u
       DB_PASSWORD: test_pass
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
@@ -48,6 +48,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Lint with flake8
+        run: |
+          echo "Running flake8 lint check..."
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+        continue-on-error: false  # ❌ fail the build on lint errors
+
       - name: Wait for MySQL
         run: |
           until mysqladmin ping -h127.0.0.1 -P3306 --silent; do
@@ -56,10 +63,17 @@ jobs:
           done
 
       - name: Run migrations
-        run: |
-          python manage.py migrate
+        run: python manage.py migrate
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
-          python manage.py test
+          coverage run manage.py test
+          coverage report
+          coverage html
+
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov/
 
